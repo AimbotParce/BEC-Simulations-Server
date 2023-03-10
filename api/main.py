@@ -5,8 +5,8 @@ Main program for the simulation api
 import os
 import sys
 
+import lib.managers as managers
 from flask import Flask, jsonify, request
-from simulation import create_simulation
 
 app = Flask(__name__)
 
@@ -17,7 +17,8 @@ def simulate():
     Simulate the given data
     """
     data = request.get_json()
-    return jsonify({"message": "Simulation started", "ok": True})
+    response = managers.simulate(data)
+    return response
 
 
 @app.route("/api/create", methods=["POST"])
@@ -26,7 +27,7 @@ def create():
     Create a new simulation
     """
     data = request.get_json()
-    response = create_simulation(data)
+    response = managers.create_simulation(data)
     return response
 
 

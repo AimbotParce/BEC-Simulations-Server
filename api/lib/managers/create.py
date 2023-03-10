@@ -4,7 +4,7 @@ import sys
 
 from flask import jsonify
 
-simulationsFolder = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "simulations"))
+from .. import constants
 
 
 def create_simulation(data):
@@ -12,7 +12,7 @@ def create_simulation(data):
     if not name:
         return jsonify({"message": "Missing name", "ok": False})
 
-    if os.path.exists(os.path.join(simulationsFolder, name)):
+    if os.path.exists(os.path.join(constants.SIMULATIONS_FOLDER, name)):
         return jsonify({"message": "Simulation already exists", "ok": False})
 
     if not "wave_function" in data:
@@ -21,9 +21,9 @@ def create_simulation(data):
     if not "potential" in data:
         return jsonify({"message": "Missing potential", "ok": False})
 
-    os.mkdir(os.path.join(simulationsFolder, name))
+    os.mkdir(os.path.join(constants.SIMULATIONS_FOLDER, name))
     # Copy the basic simulation from api/lib/simulation.py to the new simulation folder
-    basicSimu = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "lib", "simulation.py"))
+    basicSimu = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "simulationPattern.py"))
 
     with open(basicSimu, "r") as f:
         simulationContent = f.read()
@@ -36,7 +36,11 @@ def create_simulation(data):
         else:
             simulationContent = simulationContent.replace(match.group(0), "")
 
-    with open(os.path.join(simulationsFolder, name, "simulation.py"), "w") as f:
+    with open(os.path.join(constants.SIMULATIONS_FOLDER, name, "simulation.py"), "w") as f:
         f.write(simulationContent)
+
+    with open(os.path.join(constants.SIMULATIONS_FOLDER, name, "constants.py"), "w") as f:
+        if "constants" in data:
+            f.write(data["constants"])
 
     return jsonify({"message": "Simulation created", "ok": True})

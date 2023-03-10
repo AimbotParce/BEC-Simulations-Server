@@ -2,7 +2,6 @@ import jax.numpy as jnp
 
 <imports>
 
-<constants>
 
 def waveFunction(x, t):
     <wave_function>
