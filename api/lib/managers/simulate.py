@@ -2,6 +2,7 @@ import inspect
 import json
 import os
 import threading
+import uuid
 from importlib.machinery import SourceFileLoader
 from types import ModuleType
 
@@ -55,11 +56,6 @@ def simulate(data):
     if not "name" in data:
         return {"message": "No simulation name given", "ok": False}
 
-    # Check if a thread with the same name already exists
-    for thread in threading.enumerate():
-        if thread.name == data["name"]:
-            return {"message": "Simulation already running", "ok": False}
-
     folder = os.path.join(constants.SIMULATIONS_FOLDER, data["name"])
     if not os.path.exists(folder):
         return {"message": "Simulation does not exist", "ok": False}
@@ -91,21 +87,32 @@ def simulate(data):
 
     waveFunctionGenerator, V = loadWaveFunctionAndPotential(os.path.join(folder, "simulation.py"))
 
+    simulationID = str(uuid.uuid4())
+    while simulationID in threadStatus:
+        simulationID = str(uuid.uuid4())
+
     # Run the simulation in a new thread
-    threadStatus[data["name"]] = {"percent": 0, "finished": False}
+    threadStatus[simulationID] = {
+        "percent": 0,
+        "finished": False,
+        "status": "not running",
+        "simulation_id": simulationID,
+        "name": data["name"],
+    }
     thread = threading.Thread(
-        name=data["name"],
+        name=simulationID,
         target=__runSimulation,
-        args=(simulationConstants, waveFunctionGenerator, V, threadStatus[data["name"]]),
+        args=(simulationConstants, waveFunctionGenerator, V, threadStatus[simulationID]),
     )
 
     thread.start()
 
-    return {"message": "Simulation started", "ok": True}
+    return {"message": "Simulation started", "ok": True, "simulation_id": simulationID}
 
 
 def __runSimulation(simConstants, waveFunctionGenerator, V, threadStatus):
     # Run the simulation
+    threadStatus["status"] = "running"
     x = jnp.arange(simConstants["xMin"], simConstants["xMax"], simConstants["dx"])
     t = jnp.arange(simConstants["tMin"], simConstants["tMax"], simConstants["dt"])
 
@@ -147,6 +154,7 @@ def __runSimulation(simConstants, waveFunctionGenerator, V, threadStatus):
         psi = psi.at[iteration + 1].set(jnp.linalg.solve(A, right))
 
     # Save the simulation
-    jnp.save(os.path.join(constants.SIMULATIONS_FOLDER, "psi.npy"), psi)
+    jnp.save(os.path.join(constants.SIMULATIONS_FOLDER, threadStatus["simulation_id"] + ".npy"), psi)
     threadStatus["finished"] = True
     threadStatus["percent"] = 100
+    threadStatus["status"] = "finished"

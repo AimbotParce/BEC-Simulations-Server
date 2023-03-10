@@ -32,6 +32,16 @@ def get_status():
     return response
 
 
+@app.route("/api/get_running_simulations", methods=["POST"])
+def get_running_simulations():
+    """
+    Get the status of the simulation
+    """
+    data = request.get_json()
+    response = managers.get_running_simulations(data)
+    return response
+
+
 @app.route("/api/create", methods=["POST"])
 def create():
     """
