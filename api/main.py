@@ -4,6 +4,7 @@ Main program for the simulation api
 
 import os
 import sys
+import threading
 
 import lib.managers as managers
 from flask import Flask, jsonify, request
@@ -18,6 +19,16 @@ def simulate():
     """
     data = request.get_json()
     response = managers.simulate(data)
+    return response
+
+
+@app.route("/api/get_status", methods=["GET"])
+def get_status():
+    """
+    Get the status of the simulation
+    """
+    data = request.get_json()
+    response = managers.get_status(data)
     return response
 
 
