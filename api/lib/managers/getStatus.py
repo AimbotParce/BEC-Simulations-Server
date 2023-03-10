@@ -11,7 +11,7 @@ def get_status(data):
         return {"message": "No simulation id given", "ok": False}
 
     if not data["simulation_id"] in threadStatus:
-        return {"message": "Simulation not running", "ok": False}
+        return {"message": "Simulation does not exist", "ok": False}
 
     percent = threadStatus[data["simulation_id"]]["percent"]
     finished = threadStatus[data["simulation_id"]]["finished"]
