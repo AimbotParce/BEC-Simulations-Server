@@ -154,7 +154,7 @@ def __runSimulation(simConstants, waveFunctionGenerator, V, threadStatus):
         psi = psi.at[iteration + 1].set(jnp.linalg.solve(A, right))
 
     # Save the simulation
-    jnp.save(os.path.join(constants.SIMULATIONS_FOLDER, threadStatus["simulation_id"] + ".npy"), psi)
+    jnp.save(os.path.join(constants.SIMULATIONS_FOLDER, "results", threadStatus["simulation_id"] + ".npy"), psi)
     threadStatus["finished"] = True
     threadStatus["percent"] = 100
     threadStatus["status"] = "finished"

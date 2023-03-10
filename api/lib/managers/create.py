@@ -43,4 +43,7 @@ def create_simulation(data):
         if "constants" in data:
             f.write(data["constants"])
 
+    # Create a directory for the results
+    os.mkdir(os.path.join(constants.SIMULATIONS_FOLDER, name, "results"))
+
     return jsonify({"message": "Simulation created", "ok": True})
