@@ -14,8 +14,6 @@ from ..BEC_simulations.lib import constants as BECconstants
 from ..BEC_simulations.lib.managers.crankNicolson import default as crankNicolson
 
 jax.config.update("jax_enable_x64", True)
-
-
 threadStatus = {}
 
 

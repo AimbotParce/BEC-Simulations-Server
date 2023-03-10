@@ -1,3 +1,5 @@
+import base64
+import io
 import os
 
 import numpy as np
@@ -13,26 +15,24 @@ def get_result(data):
     if not "simulation_id" in data:
         return {"message": "No simulation id given", "ok": False}
 
-    if not data["simulation_id"] in threadStatus:
-        return {"message": "Simulation does not exist", "ok": False}
-
-    if not threadStatus[data["simulation_id"]]["finished"]:
-        return {"message": "Simulation not finished", "ok": False}
-
-    folderName = threadStatus[data["simulation_id"]]["simulation_name"]
-
-    # Get the results
-    resultsFolder = os.path.join(constants.SIMULATIONS_FOLDER, folderName, "results")
     resultFile = None
-    for file in os.listdir(resultsFolder):
-        if file.endswith(".npy") and file.startswith(data["simulation_id"]):
-            resultFile = os.path.join(resultsFolder, file)
-            break
+    for root, dirs, files in os.walk(constants.SIMULATIONS_FOLDER):
+        for file in files:
+            if file.endswith(".npy") and file.startswith(data["simulation_id"]):
+                resultFile = os.path.join(root, file)
+                break
 
     if resultFile is None:
         return {"message": "No results found", "ok": False}
 
-    results = np.load(resultFile, allow_pickle=True).item()
-    print(results)
+    matrix = np.load(resultFile, allow_pickle=True)
 
-    return {"message": "Results", "ok": True, "results": results}
+    buffer = io.BytesIO()
+
+    np.save(buffer, matrix)
+
+    result = base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+    # To decode: np.load(io.BytesIO(base64.b64decode(response["result"])), allow_pickle=True)
+
+    return {"message": "Results", "ok": True, "result": result}
