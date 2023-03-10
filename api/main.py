@@ -32,13 +32,13 @@ def get_status():
     return response
 
 
-@app.route("/api/get_running_simulations", methods=["POST"])
-def get_running_simulations():
+@app.route("/api/list_simulations", methods=["POST"])
+def list_simulations():
     """
     Get the status of the simulation
     """
     data = request.get_json()
-    response = managers.get_running_simulations(data)
+    response = managers.list_simulations(data)
     return response
 
 
