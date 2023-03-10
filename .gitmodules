@@ -1,0 +1,3 @@
+[submodule "BEC-Soliton-Kapitza-Pendulum"]
+	path = BEC-Soliton-Kapitza-Pendulum
+	url = git@github.com:AimbotParce/BEC-Soliton-Kapitza-Pendulum.git
