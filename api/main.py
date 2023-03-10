@@ -42,6 +42,16 @@ def list_simulations():
     return response
 
 
+@app.route("/api/get_result", methods=["POST"])
+def get_result():
+    """
+    Get the results of the simulation
+    """
+    data = request.get_json()
+    response = managers.get_result(data)
+    return response
+
+
 @app.route("/api/create", methods=["POST"])
 def create():
     """

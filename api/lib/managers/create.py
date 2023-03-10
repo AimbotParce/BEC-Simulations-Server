@@ -8,7 +8,7 @@ from .. import constants
 
 
 def create_simulation(data):
-    name = data.get("name")
+    name = data.get("simulation_name")
     if not name:
         return jsonify({"message": "Missing name", "ok": False})
 

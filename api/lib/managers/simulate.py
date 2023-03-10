@@ -53,10 +53,10 @@ def loadWaveFunctionAndPotential(path):
 
 
 def simulate(data):
-    if not "name" in data:
+    if not "simulation_name" in data:
         return {"message": "No simulation name given", "ok": False}
 
-    folder = os.path.join(constants.SIMULATIONS_FOLDER, data["name"])
+    folder = os.path.join(constants.SIMULATIONS_FOLDER, data["simulation_name"])
     if not os.path.exists(folder):
         return {"message": "Simulation does not exist", "ok": False}
 
@@ -97,7 +97,7 @@ def simulate(data):
         "finished": False,
         "status": "not running",
         "simulation_id": simulationID,
-        "name": data["name"],
+        "simulation_name": data["simulation_name"],
     }
     thread = threading.Thread(
         name=simulationID,
@@ -154,7 +154,15 @@ def __runSimulation(simConstants, waveFunctionGenerator, V, threadStatus):
         psi = psi.at[iteration + 1].set(jnp.linalg.solve(A, right))
 
     # Save the simulation
-    jnp.save(os.path.join(constants.SIMULATIONS_FOLDER, "results", threadStatus["simulation_id"] + ".npy"), psi)
+    jnp.save(
+        os.path.join(
+            constants.SIMULATIONS_FOLDER,
+            threadStatus["simulation_name"],
+            "results",
+            threadStatus["simulation_id"] + ".npy",
+        ),
+        psi,
+    )
     threadStatus["finished"] = True
     threadStatus["percent"] = 100
     threadStatus["status"] = "finished"
