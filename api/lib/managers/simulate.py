@@ -1,3 +1,4 @@
+import inspect
 import json
 import os
 import threading
@@ -10,7 +11,44 @@ import jax.numpy as jnp
 from .. import constants
 from ..BEC_simulations.lib import constants as BECconstants
 from ..BEC_simulations.lib.managers.crankNicolson import default as crankNicolson
-from ..BEC_simulations.run import loadWaveFunctionAndPotential
+
+jax.config.update("jax_enable_x64", True)
+
+
+threadStatus = {}
+
+
+def loadWaveFunctionAndPotential(path):
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"File {path} not found")
+
+    if not path.endswith(".py"):
+        raise ValueError(f"File {path} must be a Python file")
+
+    module = SourceFileLoader("module", path).load_module()
+    if not hasattr(module, "waveFunction"):
+        raise AttributeError(f"File {path} must have a waveFunction function")
+    if not inspect.isfunction(module.waveFunction):
+        raise AttributeError(f"waveFunction must be a function")
+    waveFunctionGenerator = module.waveFunction
+    # Check if function has the right signature
+    signature = list(inspect.signature(waveFunctionGenerator).parameters.keys())
+    if not signature == ["x", "t"]:
+        raise AttributeError(
+            f"waveFunction must have the signature waveFunction(x, t), but has waveFunction({', '.join(signature)})"
+        )
+
+    if not hasattr(module, "V"):
+        raise AttributeError(f"File {path} must have a potential function (V)")
+    if not inspect.isfunction(module.V):
+        raise AttributeError(f"V must be a function")
+    V = module.V
+    # Check if function has the right signature
+    signature = list(inspect.signature(V).parameters.keys())
+    if not signature == ["x", "t"]:
+        raise AttributeError(f"V must have the signature V(x, t), but has V({', '.join(signature)})")
+
+    return waveFunctionGenerator, V
 
 
 def simulate(data):
@@ -54,15 +92,19 @@ def simulate(data):
     waveFunctionGenerator, V = loadWaveFunctionAndPotential(os.path.join(folder, "simulation.py"))
 
     # Run the simulation in a new thread
+    threadStatus[data["name"]] = {"percent": 0, "finished": False}
     thread = threading.Thread(
-        name=data["name"], target=__runSimulation, args=(simulationConstants, waveFunctionGenerator, V)
+        name=data["name"],
+        target=__runSimulation,
+        args=(simulationConstants, waveFunctionGenerator, V, threadStatus[data["name"]]),
     )
+
+    thread.start()
 
     return {"message": "Simulation started", "ok": True}
 
 
-def __runSimulation(simConstants, waveFunctionGenerator, V):
-
+def __runSimulation(simConstants, waveFunctionGenerator, V, threadStatus):
     # Run the simulation
     x = jnp.arange(simConstants["xMin"], simConstants["xMax"], simConstants["dx"])
     t = jnp.arange(simConstants["tMin"], simConstants["tMax"], simConstants["dt"])
@@ -78,6 +120,7 @@ def __runSimulation(simConstants, waveFunctionGenerator, V):
     psi = psi.at[0].set(waveFunctionGenerator(x, 0))
 
     for iteration in range(0, simConstants["tCount"]):
+        threadStatus["percent"] = 100 * iteration / simConstants["tCount"]
         time = t[iteration]
         A = crankNicolson.computeLeft(
             x,
@@ -105,3 +148,5 @@ def __runSimulation(simConstants, waveFunctionGenerator, V):
 
     # Save the simulation
     jnp.save(os.path.join(constants.SIMULATIONS_FOLDER, "psi.npy"), psi)
+    threadStatus["finished"] = True
+    threadStatus["percent"] = 100

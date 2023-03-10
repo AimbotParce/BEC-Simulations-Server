@@ -1,19 +1,19 @@
 import threading
 
+from .simulate import threadStatus
+
 
 def get_status(data):
     """
     Get the status of the simulation
     """
     if not "name" in data:
-        return {"message": "No simulation name given", "ok": False}
+        return {"message": "No simulation name given", "ok": False, "percent": 0, "finished": False}
 
-    # Check if a thread with the same name already exists
-    runningThread = None
-    for thread in threading.enumerate():
-        if thread.name == data["name"]:
-            runningThread = thread
-            break
+    if not data["name"] in threadStatus:
+        return {"message": "Simulation not running", "ok": False, "percent": 0, "finished": False}
 
-    if runningThread is None:
-        return {"message": "Simulation not running", "ok": False}
+    percent = threadStatus[data["name"]]["percent"]
+    finished = threadStatus[data["name"]]["finished"]
+
+    return {"message": "Simulation running", "ok": True, "percent": percent, "finished": finished}

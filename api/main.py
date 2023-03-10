@@ -22,7 +22,7 @@ def simulate():
     return response
 
 
-@app.route("/api/get_status", methods=["GET"])
+@app.route("/api/get_status", methods=["POST"])
 def get_status():
     """
     Get the status of the simulation
