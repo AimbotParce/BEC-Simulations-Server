@@ -41,7 +41,8 @@ def create_simulation(data):
 
     with open(os.path.join(constants.SIMULATIONS_FOLDER, name, "constants.py"), "w") as f:
         if "constants" in data:
-            f.write(data["constants"])
+            for constant in data["constants"]:
+                f.write(f"{constant} = {data['constants'][constant]}" + os.linesep)
 
     # Create a directory for the results
     os.mkdir(os.path.join(constants.SIMULATIONS_FOLDER, name, "results"))

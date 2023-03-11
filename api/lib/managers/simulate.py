@@ -109,58 +109,62 @@ def simulate(data):
 
 
 def __runSimulation(simConstants, waveFunctionGenerator, V, threadStatus):
-    # Run the simulation
-    threadStatus["status"] = "running"
-    x = jnp.arange(simConstants["xMin"], simConstants["xMax"], simConstants["dx"])
-    t = jnp.arange(simConstants["tMin"], simConstants["tMax"], simConstants["dt"])
+    try:
+        # Run the simulation
+        threadStatus["status"] = "running"
+        x = jnp.arange(simConstants["xMin"], simConstants["xMax"], simConstants["dx"])
+        t = jnp.arange(simConstants["tMin"], simConstants["tMax"], simConstants["dt"])
 
-    waveFunctionGenerator = jax.jit(waveFunctionGenerator)
-    V = jax.jit(V)
+        waveFunctionGenerator = jax.jit(waveFunctionGenerator)
+        V = jax.jit(V)
 
-    psi = jnp.zeros((len(t), len(x)), dtype=jnp.complex128)
-    potential = jnp.zeros((len(t), len(x)), dtype=jnp.float64)
-    for iteration in range(0, len(t)):
-        potential = potential.at[iteration].set(V(x, t[iteration]))
+        psi = jnp.zeros((len(t), len(x)), dtype=jnp.complex128)
+        potential = jnp.zeros((len(t), len(x)), dtype=jnp.float64)
+        for iteration in range(0, len(t)):
+            potential = potential.at[iteration].set(V(x, t[iteration]))
 
-    psi = psi.at[0].set(waveFunctionGenerator(x, 0))
+        psi = psi.at[0].set(waveFunctionGenerator(x, 0))
 
-    for iteration in range(0, simConstants["tCount"]):
-        threadStatus["percent"] = 100 * iteration / simConstants["tCount"]
-        time = t[iteration]
-        A = crankNicolson.computeLeft(
-            x,
-            psi[iteration],  # psi
-            potential[iteration + 1],
-            simConstants["dx"],
-            simConstants["dt"],
-            simConstants["mass"],
-            simConstants["hbar"],
-            simConstants["g"],
+        for iteration in range(0, simConstants["tCount"]):
+            threadStatus["percent"] = 100 * iteration / simConstants["tCount"]
+            time = t[iteration]
+            A = crankNicolson.computeLeft(
+                x,
+                psi[iteration],  # psi
+                potential[iteration + 1],
+                simConstants["dx"],
+                simConstants["dt"],
+                simConstants["mass"],
+                simConstants["hbar"],
+                simConstants["g"],
+            )
+
+            B = crankNicolson.computeRight(
+                x,
+                psi[iteration],
+                potential[iteration],
+                simConstants["dx"],
+                simConstants["dt"],
+                simConstants["mass"],
+                simConstants["hbar"],
+                simConstants["g"],
+            )
+            right = B @ psi[iteration]
+            psi = psi.at[iteration + 1].set(jnp.linalg.solve(A, right))
+
+        # Save the simulation
+        jnp.save(
+            os.path.join(
+                constants.SIMULATIONS_FOLDER,
+                threadStatus["simulation_name"],
+                "results",
+                threadStatus["simulation_id"] + ".npy",
+            ),
+            psi,
         )
-
-        B = crankNicolson.computeRight(
-            x,
-            psi[iteration],
-            potential[iteration],
-            simConstants["dx"],
-            simConstants["dt"],
-            simConstants["mass"],
-            simConstants["hbar"],
-            simConstants["g"],
-        )
-        right = B @ psi[iteration]
-        psi = psi.at[iteration + 1].set(jnp.linalg.solve(A, right))
-
-    # Save the simulation
-    jnp.save(
-        os.path.join(
-            constants.SIMULATIONS_FOLDER,
-            threadStatus["simulation_name"],
-            "results",
-            threadStatus["simulation_id"] + ".npy",
-        ),
-        psi,
-    )
-    threadStatus["finished"] = True
-    threadStatus["percent"] = 100
-    threadStatus["status"] = "finished"
+        threadStatus["finished"] = True
+        threadStatus["percent"] = 100
+        threadStatus["status"] = "finished"
+    except Exception as e:
+        threadStatus["status"] = "error"
+        threadStatus["error"] = str(e)

@@ -15,8 +15,15 @@ def get_status(data):
 
     percent = threadStatus[data["simulation_id"]]["percent"]
     finished = threadStatus[data["simulation_id"]]["finished"]
+    status = threadStatus[data["simulation_id"]]["status"]
 
     if finished:
-        return {"message": "Simulation finished", "ok": True, "percent": percent, "finished": finished}
+        return {
+            "message": "Simulation finished",
+            "ok": True,
+            "percent": percent,
+            "finished": finished,
+            "status": status,
+        }
 
-    return {"message": "Simulation running", "ok": True, "percent": percent, "finished": finished}
+    return {"message": "Simulation running", "ok": True, "percent": percent, "finished": finished, "status": status}
