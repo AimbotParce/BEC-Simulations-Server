@@ -96,6 +96,7 @@ def simulate(data):
         "status": "not running",
         "simulation_id": simulationID,
         "simulation_name": data["simulation_name"],
+        "error": None,
     }
     thread = threading.Thread(
         name=simulationID,
@@ -166,5 +167,6 @@ def __runSimulation(simConstants, waveFunctionGenerator, V, threadStatus):
         threadStatus["percent"] = 100
         threadStatus["status"] = "finished"
     except Exception as e:
-        threadStatus["status"] = "error"
         threadStatus["error"] = str(e)
+        threadStatus["status"] = "error"
+        raise e

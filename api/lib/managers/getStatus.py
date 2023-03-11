@@ -21,9 +21,7 @@ def get_status(data):
         return {
             "message": "Simulation finished",
             "ok": True,
-            "percent": percent,
-            "finished": finished,
-            "status": status,
+            **threadStatus[data["simulation_id"]],
         }
 
-    return {"message": "Simulation running", "ok": True, "percent": percent, "finished": finished, "status": status}
+    return {"message": "Simulation running", "ok": True, **threadStatus[data["simulation_id"]]}
