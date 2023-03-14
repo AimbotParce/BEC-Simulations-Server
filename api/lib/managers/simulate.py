@@ -13,6 +13,7 @@ import jax.numpy as jnp
 
 from .. import constants
 from ..BEC_simulations.lib import constants as BECconstants
+from ..BEC_simulations.lib.interface.arguments import setupParser
 from ..BEC_simulations.lib.managers.crankNicolson import default as crankNicolson
 from ..BEC_simulations.lib.managers.run import getSimulatorModule
 from ..BEC_simulations.lib.managers.run import run as BECrun
@@ -100,6 +101,10 @@ def simulate(data):
     # Arguments
     args = argparse.Namespace()
     args.input = os.path.join(folder, "simulation.py")
+
+    for action in setupParser(parseArgs=False)._actions:
+        if not hasattr(args, action.dest):
+            setattr(args, action.dest, action.default)
 
     # Get the simulator
     CNModule = getSimulatorModule(simulationMetadata.get("crank_nicolson_simulator", None))
