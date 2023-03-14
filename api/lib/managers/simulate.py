@@ -1,5 +1,7 @@
+import argparse
 import inspect
 import json
+import logging
 import os
 import threading
 import uuid
@@ -12,9 +14,13 @@ import jax.numpy as jnp
 from .. import constants
 from ..BEC_simulations.lib import constants as BECconstants
 from ..BEC_simulations.lib.managers.crankNicolson import default as crankNicolson
+from ..BEC_simulations.run import getSimulatorModule
+from ..BEC_simulations.run import run as BECrun
 
 jax.config.update("jax_enable_x64", True)
 threadStatus = {}
+
+logging.getLogger("BECsimulations").setLevel(logging.CRITICAL)
 
 
 def loadWaveFunctionAndPotential(path):
@@ -83,11 +89,20 @@ def simulate(data):
         for constant in data["constants"]:
             simulationConstants[constant] = data["constants"][constant]
 
-    waveFunctionGenerator, V = loadWaveFunctionAndPotential(os.path.join(folder, "simulation.py"))
-
     simulationID = str(uuid.uuid4())
     while simulationID in threadStatus:
         simulationID = str(uuid.uuid4())
+
+    # Simulation metadata
+    with open(os.path.join(folder, "simulation.json"), "r") as f:
+        simulationMetadata = json.load(f)
+
+    # Arguments
+    args = argparse.Namespace()
+    args.input = os.path.join(folder, "simulation.py")
+
+    # Get the simulator
+    CNModule = getSimulatorModule(simulationMetadata.get("crank_nicolson_simulator", None))
 
     # Run the simulation in a new thread
     threadStatus[simulationID] = {
@@ -101,7 +116,7 @@ def simulate(data):
     thread = threading.Thread(
         name=simulationID,
         target=__runSimulation,
-        args=(simulationConstants, waveFunctionGenerator, V, threadStatus[simulationID]),
+        args=(args, simulationConstants, CNModule, threadStatus[simulationID]),
     )
 
     thread.start()
@@ -109,60 +124,13 @@ def simulate(data):
     return {"message": "Simulation started", "ok": True, "simulation_id": simulationID}
 
 
-def __runSimulation(simConstants, waveFunctionGenerator, V, threadStatus):
+def __runSimulation(arguments, simConstants, CNModule, threadStatus):
     try:
         # Run the simulation
         threadStatus["status"] = "running"
-        x = jnp.arange(simConstants["xMin"], simConstants["xMax"], simConstants["dx"])
-        t = jnp.arange(simConstants["tMin"], simConstants["tMax"], simConstants["dt"])
 
-        waveFunctionGenerator = jax.jit(waveFunctionGenerator)
-        V = jax.jit(V)
+        BECrun(arguments, simConstants, CNModule, threadStatus)
 
-        psi = jnp.zeros((len(t), len(x)), dtype=jnp.complex128)
-        potential = jnp.zeros((len(t), len(x)), dtype=jnp.float64)
-        for iteration in range(0, len(t)):
-            potential = potential.at[iteration].set(V(x, t[iteration]))
-
-        psi = psi.at[0].set(waveFunctionGenerator(x, 0))
-
-        for iteration in range(0, simConstants["tCount"]):
-            threadStatus["percent"] = 100 * iteration / simConstants["tCount"]
-            time = t[iteration]
-            A = crankNicolson.computeLeft(
-                x,
-                psi[iteration],  # psi
-                potential[iteration + 1],
-                simConstants["dx"],
-                simConstants["dt"],
-                simConstants["mass"],
-                simConstants["hbar"],
-                simConstants["g"],
-            )
-
-            B = crankNicolson.computeRight(
-                x,
-                psi[iteration],
-                potential[iteration],
-                simConstants["dx"],
-                simConstants["dt"],
-                simConstants["mass"],
-                simConstants["hbar"],
-                simConstants["g"],
-            )
-            right = B @ psi[iteration]
-            psi = psi.at[iteration + 1].set(jnp.linalg.solve(A, right))
-
-        # Save the simulation
-        jnp.save(
-            os.path.join(
-                constants.SIMULATIONS_FOLDER,
-                threadStatus["simulation_name"],
-                "results",
-                threadStatus["simulation_id"] + ".npy",
-            ),
-            psi,
-        )
         threadStatus["finished"] = True
         threadStatus["percent"] = 100
         threadStatus["status"] = "finished"

@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import sys
@@ -43,6 +44,9 @@ def create_simulation(data):
         if "constants" in data:
             for constant in data["constants"]:
                 f.write(f"{constant} = {data['constants'][constant]}" + os.linesep)
+
+    with open(os.path.jon(constants.SIMULATIONS_FOLDER, name, "simulation.json"), "w") as f:
+        json.dump(data, f)
 
     # Create a directory for the results
     os.mkdir(os.path.join(constants.SIMULATIONS_FOLDER, name, "results"))
