@@ -14,8 +14,8 @@ import jax.numpy as jnp
 from .. import constants
 from ..BEC_simulations.lib import constants as BECconstants
 from ..BEC_simulations.lib.managers.crankNicolson import default as crankNicolson
-from ..BEC_simulations.run import getSimulatorModule
-from ..BEC_simulations.run import run as BECrun
+from ..BEC_simulations.lib.managers.run import getSimulatorModule
+from ..BEC_simulations.lib.managers.run import run as BECrun
 
 jax.config.update("jax_enable_x64", True)
 threadStatus = {}
